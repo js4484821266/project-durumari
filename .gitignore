@@ -1,0 +1,8 @@
+﻿**/bin/
+**/obj/
+*.user
+*.log
+**/__pycache__/
+**/.vscode/
+Wildlife.wmv
+gui.zip
