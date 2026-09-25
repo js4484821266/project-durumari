@@ -11,5 +11,7 @@ V = np.array([[pow(a, n, P) for n in range(P - 1)] for a in range(1, P)])
 A = np.array([[-pow(a, -n, P) % P for n in range(P - 1)] for a in range(1, P)])
 
 # Assertion
-test_vector = np.random.randint(0, P - 1, (P - 1,))
+assert np.array_equal(V.T @ (A @ test_vector) % P, test_vector)
+print("V.T @ (A @ test_vector) % P == test_vector")
 assert np.array_equal(A @ (V.T @ test_vector) % P, test_vector)
+print("A @ (V.T @ test_vector) % P == test_vector")
