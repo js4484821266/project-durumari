@@ -1,0 +1,67 @@
+=== Matrix diagnostics ===
+rank(M): 256
+condition number(M): 140.95845823357234
+max |Q Q^T - I|: 1.6653345369377348e-15
+row cosine similarity M -> Q: min/median/max = 0.4324336767957436 0.5375247580738813 1.0
+max correlation of each Q row to any real-DFT row: median = 0.2853477234578397
+
+=== Synthetic energy compaction ===
+
+ original reciprocal row a=3
+  Custom-Q   E1=0.2889 E4=0.3854 E16=0.6332 E64=0.8813
+  Real-DFT   E1=0.0733 E4=0.2529 E16=0.5328 E64=0.9180
+  DCT-II     E1=0.0723 E4=0.2458 E16=0.5187 E64=0.8501
+
+ 3-sparse Custom-Q mixture
+  Custom-Q   E1=0.5902 E4=1.0000 E16=1.0000 E64=1.0000
+  Real-DFT   E1=0.0903 E4=0.2756 E16=0.6123 E64=0.9568
+  DCT-II     E1=0.0803 E4=0.2680 E16=0.6048 E64=0.9088
+
+ sine mixture
+  Custom-Q   E1=0.0701 E4=0.2189 E16=0.5699 E64=0.9464
+  Real-DFT   E1=0.8621 E4=1.0000 E16=1.0000 E64=1.0000
+  DCT-II     E1=0.3778 E4=0.8805 E16=0.9968 E64=1.0000
+
+ period-8 waveform
+  Custom-Q   E1=0.7959 E4=0.9806 E16=1.0000 E64=1.0000
+  Real-DFT   E1=0.7959 E4=0.9898 E16=1.0000 E64=1.0000
+  DCT-II     E1=0.6451 E4=0.9014 E16=0.9833 E64=0.9985
+
+=== Real-file byte tests ===
+
+bases.py: 20 full blocks
+  Custom-Q   E16=0.3405 E64=0.7400 Huff=7.2127 bits/coeff zero=0.0148 RMSE=0.2888
+  Real-DFT   E16=0.4575 E64=0.8051 Huff=7.1346 bits/coeff zero=0.0168 RMSE=0.2866
+  DCT-II     E16=0.4595 E64=0.8055 Huff=7.1350 bits/coeff zero=0.0160 RMSE=0.2903
+
+main_whole_file_test.py: 34 full blocks
+  Custom-Q   E16=0.3198 E64=0.7255 Huff=7.8469 bits/coeff zero=0.0128 RMSE=0.2906
+  Real-DFT   E16=0.5305 E64=0.8265 Huff=7.6587 bits/coeff zero=0.0169 RMSE=0.2890
+  DCT-II     E16=0.5239 E64=0.8248 Huff=7.6590 bits/coeff zero=0.0147 RMSE=0.2882
+
+main(4).ipynb: 409 full blocks
+  Custom-Q   E16=0.3272 E64=0.7279 Huff=6.9159 bits/coeff zero=0.0192 RMSE=0.2890
+  Real-DFT   E16=0.3964 E64=0.7659 Huff=6.8219 bits/coeff zero=0.0209 RMSE=0.2885
+  DCT-II     E16=0.3962 E64=0.7665 Huff=6.8228 bits/coeff zero=0.0216 RMSE=0.2879
+
+image(20260930-034720).png: 10 full blocks
+  Custom-Q   E16=0.3133 E64=0.7162 Huff=8.1570 bits/coeff zero=0.0066 RMSE=0.2857
+  Real-DFT   E16=0.3243 E64=0.7195 Huff=8.1637 bits/coeff zero=0.0082 RMSE=0.2904
+  DCT-II     E16=0.3334 E64=0.7350 Huff=8.1441 bits/coeff zero=0.0090 RMSE=0.2873
+
+1b922f7f-d4ea-46e3-898c-71fac17789d1.png: 422 full blocks
+  Custom-Q   E16=0.3225 E64=0.7229 Huff=8.2916 bits/coeff zero=0.0094 RMSE=0.2869
+  Real-DFT   E16=0.3245 E64=0.7244 Huff=8.2914 bits/coeff zero=0.0093 RMSE=0.2873
+  DCT-II     E16=0.3250 E64=0.7244 Huff=8.2914 bits/coeff zero=0.0091 RMSE=0.2883
+
+=== Decoded grayscale image tests ===
+
+image(20260930-034720).png decoded grayscale (210, 80): 65 full blocks
+  Custom-Q   E16=0.5951 E64=0.8412 Huff=5.8226 bits/coeff zero=0.3810 RMSE=0.2287
+  Real-DFT   E16=0.6634 E64=0.8841 Huff=5.7127 bits/coeff zero=0.3812 RMSE=0.2287
+  DCT-II     E16=0.6645 E64=0.8862 Huff=5.7165 bits/coeff zero=0.3802 RMSE=0.2301
+
+1b922f7f-d4ea-46e3-898c-71fac17789d1.png decoded grayscale (552, 413): 890 full blocks
+  Custom-Q   E16=0.4126 E64=0.7663 Huff=7.5362 bits/coeff zero=0.1155 RMSE=0.2735
+  Real-DFT   E16=0.5118 E64=0.8407 Huff=7.3985 bits/coeff zero=0.1168 RMSE=0.2727
+  DCT-II     E16=0.5107 E64=0.8407 Huff=7.4000 bits/coeff zero=0.1166 RMSE=0.2730
