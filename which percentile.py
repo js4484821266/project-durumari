@@ -4,7 +4,7 @@ from struct import unpack
 
 schunk = 0x10000
 print("schunk", schunk)  #
-f = open("20231108_181233.jpg", "rb")
+f = open("Wildlife.wmv", "rb")
 p00s = []
 while True:
     chunk = f.read(schunk)
@@ -29,7 +29,7 @@ while True:
     while r - l > 1:
         m = (l + r) // 2
         coef_mid = coef_sorted[m]
-        if (coef < coef_mid).sum() < schunk // 2:
+        if (coef < coef_mid).sum() < schunk // 4:
             l = m
         else:
             r = m
