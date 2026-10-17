@@ -10,3 +10,4 @@ xprmnts/
 **/*.ipynb
 compressed.bin
 restored.bin
+*.jpg
