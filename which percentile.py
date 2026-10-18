@@ -24,8 +24,7 @@ while True:
 
     l = 0
     r = schunk
-    coef_sorted = coef
-    coef_sorted.sort()
+    coef_sorted = np.sort(coef)
     while r - l > 1:
         m = (l + r) // 2
         coef_mid = coef_sorted[m]
