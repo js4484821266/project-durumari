@@ -12,3 +12,5 @@ compressed.bin
 restored.bin
 *.jpg
 Microsoft/Windows/PowerShell/ModuleAnalysisCache
+*.docx
+*.odt
