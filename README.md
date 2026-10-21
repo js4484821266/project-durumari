@@ -1,213 +1,174 @@
 # Durumari
 
-An experimental lossless data compression research project exploring finite-field transforms, exponential models, and linear recurrences.
+An experimental lossless data compression research project exploring finite-field Fourier transforms, exponential prediction models, and byte predictors.
 
-The project investigates whether algebraic structure in binary data can provide compact, exactly reversible representations. It also compares finite-field models with simpler byte predictors and explores real-valued transforms such as DCT.
+The project investigates whether algebraic structure in binary data can provide compact, exactly reversible representations. It also includes DCT reconstruction experiments and comparisons with reciprocal-derived real orthogonal bases.
 
-**This is a research codebase, not a complete file compression tool.** Individual codecs, mathematical checks, and size-estimation experiments are implemented, but a unified file format and an end-to-end file encoder/decoder are not yet available. Compression gains are hypotheses to test, not assumed properties of the transforms.
+**This is a research codebase, not a complete file compression tool.** The tracked sources contain transform checks, predictor implementations, and payload-cost estimators. A unified file format and an end-to-end file encoder/decoder are not yet available. Compression gains are hypotheses to test, not assumed properties of the transforms.
+
+This README describes the files tracked in Git.
 
 ## Research approach
 
-The main finite-field experiments use:
+The finite-field experiments use:
 
-- Prime modulus: `p = 257`
-- Field: `F_257`
+- Prime modulus: p = 257
+- Field: F_257
 - Default block length: 256 bytes
-- Input byte values: `0..255`
-- Field element values: `0..256`
+- Input byte values: 0..255
+- Field element values: 0..256
 
-Because `257 - 1 = 256`, the nonzero field elements provide a natural basis family for 256-element blocks.
+Because 257 - 1 = 256, the nonzero field elements provide a natural basis family for 256-element blocks.
 
 ### Finite-field Fourier / Vandermonde transform
 
-For `a = 1..256` and `n = 0..255`, the synthesis and analysis matrices are:
+For a = 1..256 and n = 0..255, the synthesis and analysis matrices are:
 
-```text
-V[a - 1, n] = a^n mod 257
-A[a - 1, n] = -a^(-n) mod 257
+    V[a - 1, n] = a^n mod 257
+    A[a - 1, n] = -a^(-n) mod 257
 
-c = A @ x mod 257
-x = V.T @ c mod 257
-```
+    c = A @ x mod 257
+    x = V.T @ c mod 257
 
-The notebooks contain checks of `A @ V.T mod 257 == I` and exact reconstruction. They also demonstrate that a signal such as
-
-```text
-x[n] = 6 + 9*2^n + 8*3^n + 7*4^n mod 257
-```
-
-has only four nonzero transform coefficients.
+The scripts in [archive/main.py](archive/main.py) and [archive/main_whole_file_test.py](archive/main_whole_file_test.py) construct these matrices and include assertions checking reconstruction in both directions on the first input block.
 
 Invertibility establishes information preservation. It does not establish compression: the model, coefficients, residuals, and metadata must together cost less than the original representation.
 
-### Linear recurrences
-
-`berlekamp_massey()` finds a minimal linear recurrence over `F_257` for the supplied finite sequence:
-
-```text
-x[n] = c[0]*x[n-1] + ... + c[k-1]*x[n-k] mod 257
-```
-
-The Linear codec stores the first `k` values and the `k` recurrence coefficients. Its current representation is:
-
-```text
-[0x07][k: uint16 little-endian][2*k field elements packed into 9 bits each]
-```
-
-Its size is `3 + ceil(18*k / 8)` bytes, excluding any outer framing. The decoder receives the original length separately.
-
-Berlekamp–Massey finds an exact recurrence. It does not optimize a lower-order approximate recurrence together with a residual encoding.
+Including a Fourier component at least once is a design requirement for the proposed compression path. RAW and simpler predictors remain useful experimental controls. Their results help distinguish the contribution of Fourier modeling from improvements due to other components.
 
 ## Repository layout
 
 | Path | Purpose |
 | --- | --- |
-| `archive/main.ipynb` | Transform construction and checks; Constant, Delta, Delta2, Periodic, and Fourier1 codecs; first-block comparison on `Wildlife.wmv`. |
-| `archive/main_with_linear.ipynb` | A related notebook adding Berlekamp–Massey, the Linear codec, and a RAW candidate; first-block comparison on `gui.zip`. |
-| `archive/main.py` | Exhaustive single-exponential model search on the first block, minimizing estimated Huffman residual payload. |
-| `archive/main_whole_file_test.py` | Whole-file comparison of raw-byte and finite-field-transform Huffman payload costs. |
-| `archive/bases.py` | Separate mod-256 predictor implementation and file-level size estimator. |
-| `codecs/const.py` | Standalone Constant encoder returning a list of integer fields. |
-| `dct.ipynb` | DCT energy analysis and model-plus-residual size estimates for a 64 KiB sample. |
-| `main.py` | DCT rounding and reconstruction experiment on a JPEG; not a compression CLI. |
-| `which percentile.py` | DCT coefficient-rank exploration. |
-| `which percentile.ipynb` | Incomplete exploratory notebook. |
-| `archive/reciprocal_basis_experiment.py` | Reciprocal-derived real basis construction, SVD orthogonalization, and DFT/DCT comparisons. |
-| `archive/reciprocal_basis_experiment_output.txt` | Saved results from reciprocal-basis experiments. |
-| Other files in `archive/` | Modular arithmetic, periodic waveforms, orthogonality, FFT, and byte-distribution explorations. |
+| [archive/main.py](archive/main.py) | First-block Fourier checks and exhaustive single-exponential model search, minimizing estimated Huffman residual payload. |
+| [archive/main_whole_file_test.py](archive/main_whole_file_test.py) | Whole-file comparison of raw-byte and finite-field-transform Huffman payload costs. |
+| [archive/bases.py](archive/bases.py) | Mod-256 predictor implementations and a file-level size estimator. |
+| [codecs/const.py](codecs/const.py) | Standalone Constant encoder returning a list of integer fields. |
+| [main.py](main.py) | DCT coefficient rounding and reconstruction experiment in 65,536-byte chunks; not a compression CLI. |
+| [which percentile.py](which%20percentile.py) | DCT reconstruction checks and coefficient-rank exploration. |
+| [archive/reciprocal_basis_experiment.py](archive/reciprocal_basis_experiment.py) | Reciprocal-derived real basis construction, SVD orthogonalization, and DFT/DCT comparisons. |
+| [archive/reciprocal_basis_experiment_output.txt](archive/reciprocal_basis_experiment_output.txt) | Saved diagnostics and comparison metrics from reciprocal-basis experiments. |
+| [archive/constant_basis test.py](archive/constant_basis%20test.py) | Example invocation of the Constant predictor. |
+| [archive/ndarray tests.py](archive/ndarray%20tests.py) | NumPy concatenation, reshaping, and flattening experiment. |
+| [archive/unary even sine test.py](archive/unary%20even%20sine%20test.py) | Periodic waveform generation and pairwise orthogonality assertions. |
+| [archive/unary staccato sine test.py](archive/unary%20staccato%20sine%20test.py) | Sparse periodic waveform generation and pairwise orthogonality assertions. |
+| [n-errors-by-type&norm.png](n-errors-by-type%26norm.png) | Transform type/normalization comparison figure. |
 
-The two main notebooks share their initial transform and codec implementations, apart from the input file selection. The Linear notebook adds functionality; filenames alone should not be treated as a version history.
+## Implemented predictor models
 
-Some experiments require local sample files, including `Wildlife.wmv`, `archive/gui.zip`, and JPEG images. These samples are excluded by `.gitignore` and may not be present in a fresh checkout. Most notebooks are also ignored; files available locally may therefore be absent from a clone. The already tracked `dct.ipynb` remains tracked despite the ignore rule.
+[archive/bases.py](archive/bases.py) implements the following representations for blocks of at most 256 bytes:
 
-## Implemented models
-
-The main notebooks implement the following block representations:
-
-| Model | Functions | Representation |
+| Model | Function | Representation |
 | --- | --- | --- |
-| RAW | Lambda in the competition cell | Method identifier followed by the input bytes. |
-| Constant | `encoder_const()`, `decoder_const()` | Most frequent byte plus position/value exceptions. |
-| Delta | `encoder_delta()`, `decoder_delta()` | First byte plus Constant encoding of mod-256 first differences. |
-| Delta2 | `encoder_delta2()`, `decoder_delta2()` | First two bytes plus Constant encoding of mod-256 second differences. |
-| Periodic | `encoder_periodic()`, `decoder_periodic()` | Period, initial seed, and position/value exceptions; searches periods `2..n//2`. |
-| Fourier1 | `encoder_fourier1()`, `decoder_fourier1()` | One finite-field exponential model plus position/value exceptions. |
-| Linear | `encoder_linear()`, `decoder_linear()` | Initial values and exact recurrence coefficients, packed as 9-bit field elements. |
+| RAW | raw_basis() | Original bytes, with an assumed one-byte mode cost. |
+| Constant | constant_basis() | Most frequent byte plus nonzero mod-256 residuals. |
+| Delta | delta_basis() | First byte plus nonzero mod-256 first differences. |
+| Delta2 | delta2_basis() | First two bytes plus residuals from the prediction 2*x[n-1] - x[n-2]. |
+| Periodic | periodic_basis() | Period, initial seed, and residuals relative to x[n-T]. |
 
-Fourier1 searches each basis and chooses the coefficient satisfying the largest number of positions. It is distinct from `archive/main.py`, which searches models by estimated Huffman residual payload cost.
+Supporting functions and types:
 
-`archive/bases.py` is a separate implementation:
+- BasisResult holds the mode name, parameter bytes, residual bytes, estimated cost, and residual count.
+- _pack_sparse_residual() stores each nonzero residual as a one-byte position and one-byte value.
+- periodic_basis() considers periods 2, 3, 4, 5, 6, 7, 8, 16, and 32 by default.
+- best_basis() compares the five models by estimated cost and favors RAW on a tie.
+- analyze_file() accumulates model-selection counts and estimated costs over complete and short final blocks.
+- run_sanity_tests() prints costs for a single-outlier block, a ramp, and a period-four example. It does not perform decoder round-trip assertions.
 
-- `BasisResult` holds model parameters, sparse residual bytes, and an estimated cost.
-- `_pack_sparse_residual()` stores nonzero mod-256 residuals as one-byte position/value pairs.
-- `best_basis()` compares RAW, Constant, Delta, Delta2, and Periodic; it does not include Fourier1 or Linear.
-- `analyze_file()` accumulates estimated costs and model-selection statistics over a file.
+The separate encode() in [codecs/const.py](codecs/const.py) stores a method identifier, the most frequent byte, an exception count, and position/original-value pairs. Its format differs from the sparse residual representation in bases.py. It has no matching decoder in the tracked sources.
 
-The two implementations are not interchangeable. For example, the notebook Delta codec models the most frequent difference, while `bases.py` stores nonzero differences relative to zero. Their Periodic candidate sets and overhead accounting also differ.
+### Single-exponential Fourier model search
 
-## Recorded observations
+[archive/main.py](archive/main.py) models the first 256-byte block as:
 
-The following figures are saved notebook outputs, not a guarantee for other inputs or a fresh execution.
+    predicted[n] = c * a^n mod 257
+    residual[n] = (input[n] - predicted[n]) mod 257
 
-### Linear examples
+It searches a = 2..256 and c = 1..256, totaling 65,280 candidates. The constant basis and zero coefficient are excluded. The winning candidate minimizes the Huffman payload estimate returned by huffman_bits().
 
-| Input | Input size | Recurrence order | Encoded size |
-| --- | ---: | ---: | ---: |
-| `b"ABCD" * 64` | 256 B | 4 | 12 B |
-| All zeros | 256 B | 0 | 3 B |
-| Seeded random bytes | 256 B | 128 | 291 B |
+This search does not include the storage cost of the basis, coefficient, codebook, or headers. It is a residual-distribution experiment, not a complete Fourier codec.
 
-These examples include encoder/decoder round-trip assertions. The four-exponential synthetic signal separately produces a recurrence of order four.
+## Whole-file Huffman experiment
 
-### First block of a ZIP file
+[archive/main_whole_file_test.py](archive/main_whole_file_test.py) compares:
 
-`archive/main_with_linear.ipynb` records:
+1. A global Huffman model for the original bytes.
+2. A global Huffman model for finite-field Fourier coefficients from complete 256-byte blocks.
 
-| Model | Reported size |
-| --- | ---: |
-| RAW | 257 |
-| Periodic | 267 |
-| Linear | 291 |
-| Constant | 311 |
-| Fourier1 | 312 |
-| Delta | 366 |
-| Delta2 | 383 |
+Blocks are processed in batches using:
 
-RAW wins this comparison. These are lengths of returned integer lists; Linear has explicit byte packing, while Fourier1 still has an unresolved serialization case for coefficient 256. The sample includes ZIP headers and filenames and does not characterize the entire archive.
+    coefficients = (blocks @ A.T) mod 257
 
-The older `main.ipynb` comparison has no RAW candidate and reports Constant as best at 267 fields for a 256-byte Wildlife block. Winning that candidate set does not imply compression.
+The final short block is left as raw symbols and added to the transformed-stream histogram. huffman_bits_from_counts() computes the optimal binary Huffman payload length from frequency merge costs.
 
-### Whole-file finite-field transform experiment
+The script reports payload bits, rounded-up payload bytes, ratios, and symbol counts. It does not generate compressed bitstreams or include codebooks, original-length metadata, or file headers. The tracked sources do not contain a saved execution log for this experiment, so no measured whole-file compression result is claimed here.
 
-`archive/main_whole_file_test.py` compares two global Huffman payload estimates:
+## DCT experiments
 
-1. Original byte frequencies.
-2. Frequencies after transforming complete 256-byte blocks, with the final short block left as raw symbols.
+[main.py](main.py) and [which percentile.py](which%20percentile.py) read signed byte samples in 65,536-byte chunks, compute a DCT, round coefficients to integers, apply the inverse transform, and count mismatching samples.
 
-The research handover reports the following historical observations for a 26,246,026-byte `Wildlife.wmv` file:
+Both scripts repeat a short final chunk to fill the working buffer. They do not define a file format for recovering the original length. In main.py, p00s remains empty before its mean is printed. In which percentile.py, the coefficient-rank search locates approximately the lower quartile of signed coefficient values; it does not search for a reconstruction-error threshold.
 
-| Representation | Huffman payload |
-| --- | ---: |
-| Original bytes | 209,625,002 bits |
-| Finite-field Fourier coefficients | 210,170,179 bits |
+Rounding real-valued transform coefficients can introduce reconstruction error. A lossless construction would need to preserve any residual and all parameters required for decoding. These scripts do not implement that complete path.
 
-The corresponding experiment is implemented, but these exact totals were not found in saved output files during the codebase review. They are historical reported observations, not independently reproduced results. They indicate a negative result for this file and this coding model, not for every data class or entropy model.
+The tracked comparison figure illustrates transform settings, but is not a complete compressed-size benchmark. Coefficient rounding under different normalizations corresponds to different effective quantization steps.
 
-### DCT and reciprocal-derived bases
+## Reciprocal-derived orthogonal basis
 
-The current `dct.ipynb` analyzes the first 65,536 bytes of Wildlife. Its saved estimates include:
+[archive/reciprocal_basis_experiment.py](archive/reciprocal_basis_experiment.py) explores an alternative real-valued basis:
 
-| Representation | Estimated size |
-| --- | ---: |
-| Original Huffman payload | 62,514 B |
-| DCT retaining 1% of coefficients, plus residual | 68,546 B |
-| DCT retaining 100% of rounded coefficients, plus residual | 147,445 B |
+- signed_inverse_reciprocal() maps a nonzero field element to the real reciprocal of its centered modular inverse.
+- build_reciprocal_matrix() applies this mapping to finite-field exponential sequences.
+- polar_orthogonalize() uses the SVD polar factor to obtain a real orthogonal matrix.
+- build_real_dft() and build_dct2() supply comparison bases.
+- transform_metrics() measures energy concentration, rounded-coefficient statistics, estimated Huffman payload, and reconstruction RMSE.
 
-Every displayed nonzero KEEP setting costs more than the original Huffman payload. Rounding leaves a residual even when all coefficients are retained. These estimates exclude codebooks and other framing; no complete DCT file codec is implemented.
+The saved [output](archive/reciprocal_basis_experiment_output.txt) reports a full-rank matrix and a maximum orthogonality error of approximately 1.67e-15. Its text and decoded-grayscale comparisons generally show weaker energy concentration than DFT/DCT, while specially constructed synthetic signals can favor the custom basis.
 
-The reciprocal experiment constructs real-valued waveforms from centered finite-field inverses, then uses the SVD polar factor to obtain an orthogonal matrix. Saved results confirm numerical orthogonality, but do not demonstrate a practical lossless compression advantage over DFT/DCT. The saved output uses inputs different from the current script's input list, so it should not be treated as an exact record of the current configuration.
+These are transform metrics, not complete lossless compression ratios. The experiment removes block means, discards incomplete blocks, and rounds coefficients without including the cost of means, residuals, or codebooks.
+
+The saved output contains results from an earlier input configuration and is not an exact record of the script's current input list.
 
 ## Size accounting and limitations
 
-Reported sizes currently have different meanings:
+The tracked implementations use different cost boundaries:
 
-- Several notebook encoders return logical `list[int]` fields and compare list lengths.
-- Linear explicitly packs field elements into bytes.
-- `bases.py` builds parameter/residual bytes but assumes a mode-byte cost without implementing a complete stream format.
-- Huffman helpers calculate payload length from frequency merge costs; they do not generate codebooks or compressed bitstreams.
+- bases.py constructs parameter/residual bytes and adds an assumed mode-byte cost, but does not serialize a complete block stream.
+- codecs/const.py returns integer fields and compares their count with the input length.
+- The Fourier scripts calculate Huffman payload costs without storing the model or codebook.
+- The reciprocal experiment measures rounded-coefficient payload and energy statistics without a lossless reconstruction format.
 
-Consequently, these figures must not all be interpreted as complete compressed-file sizes.
+These quantities must not all be interpreted as complete compressed-file sizes.
 
-Known gaps and caveats include:
+Known limitations include:
 
-- Fourier1 can return coefficient `256`. Its candidate scoring includes a provisional extra byte, but no escape serializer implements that representation and the final competition uses list length.
-- Original length, block boundaries, final-block policy, and model dispatch are not unified.
-- Decoder validation of truncated or malformed payloads is incomplete.
-- Some exploratory cells interpret bytes as signed `int8`; this differs from embedding `0..255` directly in `F_257`. The actual Fourier1 encoder uses unsigned input.
-- Small-prime adaptation examples mask off upper bits before reconstruction. They do not implement lossless adaptation of the original full bytes.
-- DCT and reciprocal energy metrics are exploratory measurements, not lossless compression ratios.
-- Saved notebook outputs, comments, and current input settings are not always synchronized.
-- `run_sanity_tests()` in `bases.py` prints model costs; it is not a decoder round-trip test suite.
+- Original length, block boundaries, mode identifiers, and final-block handling are not unified.
+- A matching file decoder is not implemented.
+- Sparse position/value pairs can be expensive when many residuals are nonzero.
+- F_257 coefficients and residuals can include 256, requiring an explicit representation beyond a raw byte.
+- Real-valued energy concentration and reconstruction error alone do not establish compression efficiency.
+- Saved results and current experiment configurations are not always synchronized.
 
 ## Working with the experiments
 
-There is no unified installation procedure or compression command. Dependencies vary by experiment and include NumPy, SciPy, SymPy, Matplotlib, and, in some explorations, pandas and Pillow. A pinned dependency manifest is not currently provided.
+There is no unified installation procedure or compression command. The tracked experiments use NumPy, SciPy, SymPy, and, for optional decoded-image comparisons, Pillow. A pinned dependency manifest is not currently provided.
 
 Before running an experiment:
 
-1. Inspect its input paths and parameters.
-2. Make the required sample files available.
-3. Choose the working directory deliberately: several paths are relative to it, not to the script location.
-4. Distinguish saved outputs from newly reproduced measurements.
+1. Inspect its input paths and parameters and supply the required local input data.
+2. Choose the working directory deliberately: several paths are relative to it, not to the script location.
+3. Distinguish estimated payload costs from complete file sizes.
+4. Record the source version, input identity, and configuration when collecting results.
 
-Some scripts execute substantial work at module level. In particular, `archive/main.py` performs an exhaustive model search, and `archive/main_whole_file_test.py` scans the full input file. Importing these scripts can therefore start experiments.
+Some scripts execute substantial work at module level. Importing archive/main.py can start an exhaustive model search, and importing archive/main_whole_file_test.py can start a full-file scan.
 
 ## Research priorities
 
 1. Define a complete byte format and compare every model using actual serialized size, including metadata.
-2. Connect block codecs to file-level encoding and exact reconstruction checks, including short final blocks.
-3. Measure recurrence-order distributions and model-selection costs across complete files and diverse data classes.
-4. Compare the existing predictor variants under consistent storage rules.
-5. Investigate lower-order recurrences or multiple exponential bases with residuals, optimizing total stored cost rather than exact-match count alone.
+2. Connect block representations to file-level encoding and exact reconstruction checks.
+3. Compare position/value pairs, bitmap-based exception locations, and entropy-coded residuals under consistent cost accounting.
+4. Evaluate Fourier models against simple predictors across complete files and diverse data classes.
+5. Investigate shared Fourier models and multiple exponential bases with residuals.
+6. Evaluate real-valued transform approximations using coefficient, parameter, and residual costs together.
 
 Negative results remain part of the research record. Positive synthetic examples need validation on independent real data before any practical compression claim.
