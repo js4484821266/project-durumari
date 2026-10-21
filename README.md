@@ -6,7 +6,7 @@ The project investigates whether algebraic structure in binary data can provide 
 
 **This is a research codebase, not a complete file compression tool.** The tracked sources contain transform checks, predictor implementations, and payload-cost estimators. A unified file format and an end-to-end file encoder/decoder are not yet available. Compression gains are hypotheses to test, not assumed properties of the transforms.
 
-This README describes the files tracked in Git.
+The repository layout, implementation descriptions, and usage guidance below cover files tracked in Git. The Research progress section also summarizes local exploratory work, including experiments excluded from Git. Those observations describe research progress and do not imply that the corresponding implementations or inputs are available in a checkout.
 
 ## Research approach
 
@@ -101,7 +101,7 @@ Blocks are processed in batches using:
 
 The final short block is left as raw symbols and added to the transformed-stream histogram. huffman_bits_from_counts() computes the optimal binary Huffman payload length from frequency merge costs.
 
-The script reports payload bits, rounded-up payload bytes, ratios, and symbol counts. It does not generate compressed bitstreams or include codebooks, original-length metadata, or file headers. The tracked sources do not contain a saved execution log for this experiment, so no measured whole-file compression result is claimed here.
+The script reports payload bits, rounded-up payload bytes, ratios, and symbol counts. It does not generate compressed bitstreams or include codebooks, original-length metadata, or file headers. The tracked sources do not contain a saved execution log for this experiment.
 
 ## DCT experiments
 
@@ -128,6 +128,52 @@ The saved [output](archive/reciprocal_basis_experiment_output.txt) reports a ful
 These are transform metrics, not complete lossless compression ratios. The experiment removes block means, discards incomplete blocks, and rounds coefficients without including the cost of means, residuals, or codebooks.
 
 The saved output contains results from an earlier input configuration and is not an exact record of the script's current input list.
+
+## Research progress
+
+This section summarizes the research beyond the tracked source inventory. Local exploratory records, including Git-ignored experiments, are used only to describe progress here. Saved outputs were inspected rather than rerun for this update. Their sizes have different accounting boundaries and are not directly interchangeable compressed-file measurements.
+
+### Finite-field models and exact recurrences
+
+Local experiments record successful matrix-identity and reconstruction checks for the finite-field transform. A synthetic signal built from four exponential bases has four nonzero transform coefficients, confirming the expected representation for a matching signal.
+
+An exact linear-recurrence prototype using Berlekamp–Massey and 9-bit field-element packing has also been explored:
+
+| 256-byte input | Recurrence order | Prototype representation size |
+| --- | ---: | ---: |
+| Repeated ABCD pattern | 4 | 12 B |
+| All zeros | 0 | 3 B |
+| Seeded random bytes | 128 | 291 B |
+
+The byte examples include saved round-trip assertions. These successes demonstrate compact representations of particular structured inputs, not general compression performance. The recurrence prototype is local exploratory work, not part of the tracked implementation documented above, and an independent recurrence-only result does not establish a benefit from Fourier modeling.
+
+A local comparison on the first 256 bytes of a ZIP archive selected RAW at 257 fields over Periodic at 267, Linear at 291, Constant at 311, Fourier1 at 312, Delta at 366, and Delta2 at 383. The competition compares returned-list lengths: Linear has explicit byte packing, while Fourier1 still has an unresolved field-element-256 serialization case. The header-rich sample does not characterize the full archive.
+
+The research handover also reports a historical whole-file comparison on 26,246,026 bytes: original-byte Huffman payload of 209,625,002 bits versus 210,170,179 bits after the finite-field transform. The tracked script implements this experiment, but these exact totals were not found in a saved execution log. They remain reported historical observations rather than independently reproduced measurements.
+
+### DCT approximation and residual cost
+
+A local experiment on 65,536 binary-file bytes compared the original Huffman payload with rounded DCT coefficients plus a correction residual:
+
+| Representation | Estimated size |
+| --- | ---: |
+| Original Huffman payload | 62,514 B |
+| Retain 1% of DCT coefficients, plus residual | 68,546 B |
+| Retain 100% of rounded DCT coefficients, plus residual | 147,445 B |
+
+All displayed nonzero coefficient-retention settings exceeded the original Huffman payload. Even retaining every rounded coefficient leaves a residual. Codebooks and other framing are excluded, so these are partial storage estimates rather than complete codec results.
+
+### Current DST exploration
+
+The recent direction uses DST-II, scales coefficients into the signed 8-bit range, rounds them, and examines the residual needed for exact reconstruction. One 65,536-byte binary sample produced a saved sum of absolute reconstruction errors of 148,634; this is an error metric, not a byte count.
+
+A separate experiment applies a magnitude threshold before scaling and rounding the coefficients of a 65,536-sample PNG-file byte block. It constructs a residual Huffman tree and reports 56 residual symbols and a payload of 316,350 bits, rounded up to 39,544 bytes. The input is encoded PNG bytes, not decoded image pixels.
+
+The residual figure excludes coefficients, scale, codebook, original length, and padding metadata. Storing all 65,536 quantized coefficients as one byte each would already bring coefficients plus residual payload to 105,080 bytes before metadata. A sparse coefficient format could change that cost, but a complete stored representation and decoder have not been demonstrated.
+
+Normalization and quantization are active evaluation concerns. Rounding coefficients under different normalizations applies different effective quantization steps. Flooring coefficients to multiples of 256 introduces a nonpositive coefficient error: for example, -1.5 maps to -256 while 1.5 maps to 0. Such biased errors can accumulate at particular inverse-transform positions. Neither small coefficient magnitudes nor a small residual payload alone establishes a compression advantage.
+
+The next research milestone is a fully accounted model-plus-residual comparison with exact reconstruction, preserving the requirement that the proposed compression path include a Fourier component.
 
 ## Size accounting and limitations
 
